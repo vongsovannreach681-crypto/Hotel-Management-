@@ -196,6 +196,48 @@ class BookingController extends Controller
         return $candidate;
     }
 
+    private function buildStrictKhqrPayload(
+        string $bakongAccountId,
+        string $merchantName,
+        string $merchantCity,
+        int $currency,
+        float $amount
+    ): string {
+        $merchantName = mb_substr(trim($merchantName), 0, 25);
+        $merchantCity = mb_substr(trim($merchantCity), 0, 15);
+
+        $pointOfInitiation = $amount > 0 ? '12' : '11';
+        $currencyCode = (string) $currency;
+        $amountValue = $this->formatKhqrAmount($amount, $currency);
+
+        $accountInfo = $this->tlv('00', $bakongAccountId);
+        $payload = '';
+        $payload .= $this->tlv('00', '01');
+        $payload .= $this->tlv('01', $pointOfInitiation);
+        $payload .= $this->tlv('29', $accountInfo);
+        $payload .= $this->tlv('52', '5999');
+        $payload .= $this->tlv('53', $currencyCode);
+
+        if ($amountValue !== null) {
+            $payload .= $this->tlv('54', $amountValue);
+        }
+
+        $payload .= $this->tlv('58', 'KH');
+        $payload .= $this->tlv('59', $merchantName);
+        $payload .= $this->tlv('60', $merchantCity);
+
+        $base = $payload . '6304';
+        $crc = Utils::crc16($base);
+        // Convert CRC to 4-character uppercase hex string, handle both int and string returns
+        if (is_string($crc)) {
+            $crcHex = strtoupper(str_pad($crc, 4, '0', STR_PAD_LEFT));
+        } else {
+            $crcHex = strtoupper(str_pad(dechex(abs((int) $crc)), 4, '0', STR_PAD_LEFT));
+        }
+
+        return $base . $crcHex;
+    }
+
     private function buildBookingPaymentData(Booking $booking): array
     {
         $bakongAccountId = trim((string) config('services.bakong.account_id'));
