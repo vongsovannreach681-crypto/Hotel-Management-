@@ -226,11 +226,9 @@ class BookingController extends Controller
         $payload .= $this->tlv('60', $merchantCity);
 
         $base = $payload . '6304';
-        $crc = Utils::crc16($base);
-        // Ensure CRC is properly formatted as 4-character hex string
-        $crcHex = is_string($crc) ? strtoupper($crc) : str_pad(dechex($crc), 4, '0', STR_PAD_LEFT);
+        $crc = (string) Utils::crc16($base);
 
-        return $base . $crcHex;
+        return $base . $crc;
     }
 
     private function buildBookingPaymentData(Booking $booking): array
