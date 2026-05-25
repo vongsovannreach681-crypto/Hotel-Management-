@@ -227,8 +227,10 @@ class BookingController extends Controller
 
         $base = $payload . '6304';
         $crc = Utils::crc16($base);
+        // Ensure CRC is properly formatted as 4-character hex string
+        $crcHex = is_string($crc) ? strtoupper($crc) : str_pad(dechex($crc), 4, '0', STR_PAD_LEFT);
 
-        return $base . $crc;
+        return $base . $crcHex;
     }
 
     private function buildBookingPaymentData(Booking $booking): array
