@@ -40,10 +40,7 @@
         body {
             font-family: 'Poppins', sans-serif;
             color: var(--ink);
-            background:
-                radial-gradient(circle at 0 0, rgba(182, 139, 82, 0.14), transparent 28%),
-                radial-gradient(circle at 100% 100%, rgba(41, 68, 96, 0.12), transparent 30%),
-                var(--bg);
+            background: var(--bg);
             line-height: 1.6;
         }
 
@@ -172,6 +169,27 @@
             border-radius: 999px;
             font-size: 0.82rem;
             white-space: nowrap;
+        }
+
+        .user-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: inline-block;
+        }
+
+        .user-initial {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--brand);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.75rem;
         }
 
         .menu-toggle {
@@ -379,31 +397,42 @@
     @php($currentRoute = Route::currentRouteName())
     <header class="top-nav" id="home">
         <div class="container inner">
-            <a href="{{ route('user.home') }}" class="brand">Clermont Royale</a>
+            <a href="{{ Route::has('user.home') ? route('user.home') : '#' }}" class="brand">Clermont Royale</a>
             <button class="menu-toggle" id="menuToggle" aria-label="Open menu">
                 <i class="bi bi-list"></i>
             </button>
             <ul class="nav-links" id="menuLinks">
-                <li><a href="{{ route('user.home') }}" class="{{ $currentRoute === 'user.home' ? 'active' : '' }}">Home</a></li>
-                <li><a href="{{ route('user.rooms.index') }}" class="{{ $currentRoute === 'user.rooms.index' ? 'active' : '' }}">Rooms</a></li>
-                <li><a href="{{ route('user.home') }}#about">About</a></li>
-                <li><a href="{{ route('user.home') }}#contact">Contact</a></li>
+                <li><a href="{{ Route::has('user.home') ? route('user.home') : '#' }}" class="{{ $currentRoute === 'user.home' ? 'active' : '' }}">Home</a></li>
+                <li><a href="{{ Route::has('user.rooms.index') ? route('user.rooms.index') : '#' }}" class="{{ $currentRoute === 'user.rooms.index' ? 'active' : '' }}">Rooms</a></li>
+                <li><a href="{{ Route::has('user.home') ? route('user.home') : '#' }}#about">About</a></li>
+                <li><a href="{{ Route::has('user.home') ? route('user.home') : '#' }}#contact">Contact</a></li>
             </ul>
             <div class="nav-actions" id="menuActions">
-                @auth
-                    <span class="user-pill">{{ auth()->user()->name }}</span>
-                    <a href="{{ route('user.bookings.index') }}" class="btn btn-soft">My Bookings</a>
-                    @if (auth()->user()->email === 'reach@gmail.com')
-                        <a href="{{ route('dashboard.index') }}" class="btn btn-soft">Admin</a>
+                @if (auth()->check())
+                    <?php
+                        $user = auth()->user();
+                        $userName = $user?->name ?? 'User';
+                        $nameParts = explode(' ', $userName);
+                        $initials = count($nameParts) > 1
+                            ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1))
+                            : strtoupper(substr($userName, 0, 2));
+                    ?>
+                    <a href="{{ Route::has('user.profile.edit') ? route('user.profile.edit') : '#' }}" class="user-pill" style="display: inline-flex; align-items: center; gap: 8px; padding-left: 0.35rem; cursor: pointer; transition: transform 0.2s ease;">
+                        @if ($user && $user->image)
+                            <img src="{{ asset('storage/' . $user->image) }}" alt="{{ $userName }}" class="user-avatar">
+                        @else
+                            <span class="user-initial">{{ $initials }}</span>
+                        @endif
+                        <span>{{ $userName }}</span>
+                    </a>
+                    <a href="{{ Route::has('user.bookings.index') ? route('user.bookings.index') : '#' }}" class="btn btn-soft">My Bookings</a>
+                    @if ($user && $user->email === 'reach@gmail.com')
+                        <a href="{{ Route::has('dashboard.index') ? route('dashboard.index') : url('/admin') }}" class="btn btn-soft">Admin</a>
                     @endif
-                    <form action="{{ route('logout') }}" method="POST" style="display: inline-flex;">
-                        @csrf
-                        <button type="submit" class="btn btn-primary">Logout</button>
-                    </form>
                 @else
-                    <a href="{{ route('login') }}" class="btn btn-outline">Login</a>
-                    <a href="{{ route('register') }}" class="btn btn-primary">Book Now</a>
-                @endauth
+                    <a href="{{ Route::has('login') ? route('login') : '#' }}" class="btn btn-outline">Login</a>
+                    <a href="{{ Route::has('register') ? route('register') : '#' }}" class="btn btn-primary">Book Now</a>
+                @endif
             </div>
         </div>
     </header>
@@ -434,10 +463,10 @@
                 <div>
                     <div class="footer-title">Navigation</div>
                     <ul class="footer-list">
-                        <li><a href="{{ route('user.home') }}">Home</a></li>
-                        <li><a href="{{ route('user.rooms.index') }}">Rooms</a></li>
-                        <li><a href="{{ route('user.bookings.index') }}">My Bookings</a></li>
-                        <li><a href="{{ route('user.home') }}#contact">Contact</a></li>
+                        <li><a href="{{ Route::has('user.home') ? route('user.home') : '#' }}">Home</a></li>
+                        <li><a href="{{ Route::has('user.rooms.index') ? route('user.rooms.index') : '#' }}">Rooms</a></li>
+                        <li><a href="{{ Route::has('user.bookings.index') ? route('user.bookings.index') : '#' }}">My Bookings</a></li>
+                        <li><a href="{{ Route::has('user.home') ? route('user.home') : '#' }}#contact">Contact</a></li>
                     </ul>
                 </div>
                 <div id="contact">

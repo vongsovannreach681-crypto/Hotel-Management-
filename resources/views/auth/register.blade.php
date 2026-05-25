@@ -19,11 +19,10 @@
 
     .auth-head {
         padding: 1.4rem 1.3rem 1rem;
-        background:
-            linear-gradient(120deg, rgba(24, 39, 56, 0.9), rgba(45, 71, 96, 0.82)),
-            url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80');
+        background-image: url('https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1000&q=80');
         background-size: cover;
         background-position: center;
+        box-shadow: inset 0 0 0 999px rgba(24, 39, 56, 0.7);
         color: #fff;
     }
 

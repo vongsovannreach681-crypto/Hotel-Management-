@@ -1,4 +1,4 @@
-﻿<!doctype html>
+﻿﻿<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -25,8 +25,6 @@
             --danger: #ff5f58;
             --success: #24bf64;
             --warning: #f6b73c;
-            --bg-gradient-start: #eff4ff;
-            --bg-gradient-end: #f5f7fb;
             --surface-elevated: rgba(255, 255, 255, 0.9);
             --surface-muted: #f3f7ff;
             --footer: #97a3ba;
@@ -38,8 +36,6 @@
             --border: #22314b;
             --text: #ebf1ff;
             --muted: #a6b3ca;
-            --bg-gradient-start: #1a2a45;
-            --bg-gradient-end: #0f1726;
             --surface-elevated: rgba(17, 28, 46, 0.92);
             --surface-muted: #1a2a42;
             --footer: #7f8ca4;
@@ -101,7 +97,7 @@
 
         body {
             font-family: "Poppins", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
-            background: radial-gradient(circle at top left, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 55%);
+            background: var(--bg);
             color: var(--text);
             transition: background-color 0.2s ease, color 0.2s ease;
         }
@@ -161,7 +157,7 @@
         }
 
         .sidebar-link.active {
-            background: linear-gradient(110deg, var(--primary-start), var(--primary-end));
+            background: var(--primary-start);
             color: #fff;
             box-shadow: 0 10px 18px rgba(26, 111, 255, 0.25);
         }
@@ -286,12 +282,20 @@
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #dbe7ff, #a9c5ff);
+            background: #dbe7ff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
             color: #305dbf;
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
         }
 
         .profile-name {
@@ -358,7 +362,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(120deg, var(--primary-start), var(--primary-end));
+            background: var(--primary-start);
             color: #fff;
             box-shadow: 0 10px 20px rgba(26, 111, 255, 0.28);
         }
@@ -562,13 +566,32 @@
                     <button class="icon-btn" type="button" aria-label="Notification">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"></path><path d="M9 17a3 3 0 0 0 6 0"></path></svg>
                     </button>
-                    <div class="profile">
-                        <span class="avatar">VS</span>
-                        <div>
-                            <div class="profile-name">Vorng Sovannreach</div>
-                            <div class="profile-role" data-i18n="profile.role">Hotel admin</div>
-                        </div>
-                    </div>
+                    @if (auth()->check())
+                        <?php
+                            $user = auth()->user();
+                            $nameParts = explode(' ', $user->name);
+                            $initials = count($nameParts) > 1
+                                ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1))
+                                : strtoupper(substr($user->name, 0, 2));
+                        ?>
+                        <a href="{{ route('user.profile.edit') }}" class="profile" style="text-decoration: none; color: inherit;">
+                            <span class="avatar">
+                                @if ($user->image)
+                                    <img src="{{ asset('storage/' . $user->image) }}" alt="{{ $user->name }}" class="avatar-img">
+                                @else
+                                    {{ $initials }}
+                                @endif
+                            </span>
+                            <div>
+                                <div class="profile-name">{{ $user->name }}</div>
+                                @if ($user->is_admin)
+                                    <div class="profile-role" data-i18n="profile.role">Hotel Admin</div>
+                                @else
+                                    <div class="profile-role">Customer</div>
+                                @endif
+                            </div>
+                        </a>
+                    @endif
                 </div>
             </header>
 

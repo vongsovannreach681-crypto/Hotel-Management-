@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use KHQR\BakongKHQR;
 use KHQR\Helpers\KHQRData;
+use KHQR\Models\MerchantInfo;
 use KHQR\Helpers\Utils;
 use Throwable;
 
@@ -195,78 +196,47 @@ class BookingController extends Controller
         return $candidate;
     }
 
-    private function buildStrictKhqrPayload(
-        string $bakongAccountId,
-        string $merchantName,
-        string $merchantCity,
-        int $currency,
-        float $amount
-    ): string {
-        $merchantName = mb_substr(trim($merchantName), 0, 25);
-        $merchantCity = mb_substr(trim($merchantCity), 0, 15);
-
-        $pointOfInitiation = $amount > 0 ? '12' : '11';
-        $currencyCode = (string) $currency;
-        $amountValue = $this->formatKhqrAmount($amount, $currency);
-
-        $accountInfo = $this->tlv('00', $bakongAccountId);
-        $payload = '';
-        $payload .= $this->tlv('00', '01');
-        $payload .= $this->tlv('01', $pointOfInitiation);
-        $payload .= $this->tlv('29', $accountInfo);
-        $payload .= $this->tlv('52', '5999');
-        $payload .= $this->tlv('53', $currencyCode);
-
-        if ($amountValue !== null) {
-            $payload .= $this->tlv('54', $amountValue);
-        }
-
-        $payload .= $this->tlv('58', 'KH');
-        $payload .= $this->tlv('59', $merchantName);
-        $payload .= $this->tlv('60', $merchantCity);
-
-        $base = $payload . '6304';
-        $crc = Utils::crc16($base);
-
-        return $base . $crc;
-    }
-
     private function buildBookingPaymentData(Booking $booking): array
     {
         $bakongAccountId = trim((string) config('services.bakong.account_id'));
         if ($bakongAccountId === '') {
-            return ['error' => 'Bakong account is not configured.', 'is_static' => true];
+            return ['error' => 'Bakong account is not configured.', 'is_static' => true, 'payload' => null, 'md5' => null];
         }
 
         $currencyKey = strtoupper((string) config('services.bakong.currency', 'USD'));
         $currency = $currencyKey === 'KHR' ? KHQRData::CURRENCY_KHR : KHQRData::CURRENCY_USD;
         $amount = (float) $booking->total_price;
-        $forceStatic = (bool) config('services.bakong.force_static', true);
-
-        if ($currency === KHQRData::CURRENCY_KHR) {
-            $amount = (float) round($amount);
-        }
-
+        $forceStatic = (bool) config('services.bakong.force_static', false);
         $dynamicAmount = $forceStatic ? 0.0 : $amount;
-        $payload = $this->buildStrictKhqrPayload(
-            bakongAccountId: $bakongAccountId,
-            merchantName: (string) config('services.bakong.merchant_name', config('app.name')),
-            merchantCity: (string) config('services.bakong.merchant_city', 'PHNOM PENH'),
-            currency: $currency,
-            amount: $dynamicAmount
-        );
 
-        return [
-            'payload' => $payload,
-            'md5' => md5($payload),
-            'is_static' => $dynamicAmount <= 0,
-            'error' => null,
-        ];
+        try {
+            $merchantInfo = new MerchantInfo();
+            $merchantInfo->bakongAccountID = $bakongAccountId;
+            $merchantInfo->merchantID = (string) config('services.bakong.merchant_id', $bakongAccountId);
+            $merchantInfo->merchantName = (string) config('services.bakong.merchant_name', config('app.name'));
+            $merchantInfo->merchantCity = (string) config('services.bakong.merchant_city', 'PHNOM PENH');
+            $merchantInfo->amount = $dynamicAmount;
+            $merchantInfo->currency = $currency;
+            $merchantInfo->billNumber = $booking->booking_no;
+            $merchantInfo->acquiringBank = (string) config('services.bakong.acquiring_bank', '');
+
+            $response = BakongKHQR::generateMerchant($merchantInfo);
+
+            return [
+                'payload' => $response->data['qr'],
+                'md5' => $response->data['md5'],
+                'is_static' => $dynamicAmount <= 0,
+                'error' => null,
+            ];
+        } catch (Throwable $e) {
+            report($e);
+            return ['error' => 'Unable to generate Bakong QR at the moment.', 'is_static' => $dynamicAmount <= 0, 'payload' => null, 'md5' => null];
+        }
     }
 
     private function isBakongPaymentSuccessful(array $response): bool
     {
-        if (($response['responseCode'] ?? null) !== 0) {
+        if (($response['responseCode'] ?? -1) !== 0) {
             return false;
         }
 
@@ -275,29 +245,18 @@ class BookingController extends Controller
             return false;
         }
 
-        if (is_array($data) && array_key_exists('status', $data)) {
-            $status = strtoupper((string) $data['status']);
-            if (in_array($status, ['SUCCESS', 'COMPLETED', 'PAID'], true)) {
-                return true;
-            }
-        }
-
+        // Case 1: data contains a 'hash', indicating success.
         if (is_array($data) && isset($data['hash'])) {
             return true;
         }
 
+        // Case 2: data is a list of transactions. Check if any are successful.
         if (is_array($data) && array_is_list($data)) {
-            foreach ($data as $item) {
-                if (is_array($item) && isset($item['status'])) {
-                    $itemStatus = strtoupper((string) $item['status']);
-                    if (in_array($itemStatus, ['SUCCESS', 'COMPLETED', 'PAID'], true)) {
-                        return true;
-                    }
-                }
-            }
+            return collect($data)->contains(fn ($item) => $this->isTransactionItemSuccessful($item));
         }
 
-        return false;
+        // Case 3: data is a single transaction object.
+        return $this->isTransactionItemSuccessful($data);
     }
 
     private function verifyPaymentForBooking(Booking $booking): array
@@ -375,21 +334,13 @@ class BookingController extends Controller
         }
     }
 
-    private function tlv(string $tag, string $value): string
+    private function isTransactionItemSuccessful($item): bool
     {
-        return $tag . str_pad((string) strlen($value), 2, '0', STR_PAD_LEFT) . $value;
-    }
-
-    private function formatKhqrAmount(float $amount, int $currency): ?string
-    {
-        if ($amount <= 0) {
-            return null;
+        if (!is_array($item) || !isset($item['status'])) {
+            return false;
         }
 
-        if ($currency === KHQRData::CURRENCY_KHR) {
-            return (string) (int) round($amount);
-        }
-
-        return number_format($amount, 2, '.', '');
+        $status = strtoupper((string) $item['status']);
+        return in_array($status, ['SUCCESS', 'COMPLETED', 'PAID'], true);
     }
 }

@@ -5,7 +5,7 @@
 @section('extra_css')
 <style>
     .rooms-shell { width: min(1180px, calc(100% - 2rem)); margin: 2rem auto 0; }
-    .rooms-hero { background: linear-gradient(135deg, #fffaf3, #fff); border: 1px solid #eadfce; border-radius: 20px; padding: 1.4rem; box-shadow: 0 16px 30px rgba(16, 27, 40, 0.07); }
+    .rooms-hero { background: #fffaf3; border: 1px solid #eadfce; border-radius: 20px; padding: 1.4rem; box-shadow: 0 16px 30px rgba(16, 27, 40, 0.07); }
     .rooms-hero h1 { font-size: clamp(1.5rem, 2.2vw, 2.1rem); margin-bottom: 0.3rem; }
     .rooms-hero p { color: #5f7082; }
     .stats { margin-top: 1rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }

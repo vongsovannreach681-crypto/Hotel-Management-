@@ -62,7 +62,7 @@
                                             @endphp
                                             <img src="{{ $imageUrl }}" alt="{{ $hotel->name }}" style="width: 110px; height: 64px; object-fit: cover; border-radius: 10px;">
                                         @else
-                                            <div style="width: 110px; height: 64px; border-radius: 10px; background: linear-gradient(135deg, #e3ecff, #f2f6ff); display: flex; align-items: center; justify-content: center; color: #6389d9; font-size: 0.78rem; font-weight: 600;" data-i18n="room.no_image">No Image</div>
+                                            <div style="width: 110px; height: 64px; border-radius: 10px; background: #eef4ff; display: flex; align-items: center; justify-content: center; color: #6389d9; font-size: 0.78rem; font-weight: 600;" data-i18n="room.no_image">No Image</div>
                                         @endif
                                         <div>
                                             <div style="font-size: 0.78rem; color: #4f7ff5; font-weight: 600; margin-bottom: 4px;">{{ $roomCode }}</div>

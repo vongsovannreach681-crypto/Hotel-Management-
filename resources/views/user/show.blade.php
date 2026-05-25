@@ -32,7 +32,7 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: linear-gradient(180deg, rgba(10, 16, 22, 0.05), rgba(10, 16, 22, 0.62));
+        background: rgba(10, 16, 22, 0.42);
     }
 
     .detail-head {

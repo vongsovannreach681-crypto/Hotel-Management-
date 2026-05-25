@@ -48,7 +48,7 @@
                 </div>
             </div>
 
-            <div style="padding: 14px; border-radius: 12px; background: linear-gradient(120deg, #1a6fff, #25b8ff); color: #fff;">
+            <div style="padding: 14px; border-radius: 12px; background: #1a6fff; color: #fff;">
                 <div style="font-size: 0.78rem; opacity: 0.9;" data-i18n="dashboard.month_revenue">This Month Revenue</div>
                 <div style="font-size: 1.9rem; font-weight: 700; margin-top: 6px;">${{ number_format($monthlyRevenue, 2) }}</div>
             </div>
@@ -65,7 +65,7 @@
                     <span>{{ $roomUtilization }}%</span>
                 </div>
                 <div style="height: 10px; border-radius: 99px; background: #eaf0fb; overflow: hidden;">
-                    <div style="height: 100%; width: {{ $roomUtilization }}%; background: linear-gradient(110deg, #1a6fff, #25b8ff);"></div>
+                    <div style="height: 100%; width: {{ $roomUtilization }}%; background: #1a6fff;"></div>
                 </div>
             </div>
 
