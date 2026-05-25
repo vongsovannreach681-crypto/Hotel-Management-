@@ -227,8 +227,12 @@ class BookingController extends Controller
 
         $base = $payload . '6304';
         $crc = Utils::crc16($base);
-        // Convert CRC to 4-character uppercase hex string
-        $crcHex = strtoupper(str_pad(dechex($crc), 4, '0', STR_PAD_LEFT));
+        // Convert CRC to 4-character uppercase hex string, handle both int and string returns
+        if (is_string($crc)) {
+            $crcHex = strtoupper(str_pad($crc, 4, '0', STR_PAD_LEFT));
+        } else {
+            $crcHex = strtoupper(str_pad(dechex(abs((int) $crc)), 4, '0', STR_PAD_LEFT));
+        }
 
         return $base . $crcHex;
     }
