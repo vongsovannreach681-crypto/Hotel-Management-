@@ -12,6 +12,7 @@ use App\Models\Hotel;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use KHQR\BakongKHQR;
 use KHQR\Helpers\KHQRData;
 use KHQR\Models\MerchantInfo;
@@ -250,26 +251,83 @@ class BookingController extends Controller
         $amount = (float) $booking->total_price;
         $forceStatic = (bool) config('services.bakong.force_static', false);
         $dynamicAmount = $forceStatic ? 0.0 : $amount;
+        $cacheKey = $this->bookingPaymentCacheKey($booking);
+
+        $cached = null;
+        try {
+            $cached = Cache::get($cacheKey);
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        if (is_array($cached) && ! empty($cached['payload']) && ! empty($cached['md5'])) {
+            return [
+                'payload' => (string) $cached['payload'],
+                'md5' => (string) $cached['md5'],
+                'is_static' => (bool) ($cached['is_static'] ?? ($dynamicAmount <= 0)),
+                'error' => null,
+            ];
+        }
 
         try {
-            $merchantInfo = new MerchantInfo();
-            $merchantInfo->bakongAccountID = $bakongAccountId;
-            $merchantInfo->merchantID = (string) config('services.bakong.merchant_id', $bakongAccountId);
-            $merchantInfo->merchantName = (string) config('services.bakong.merchant_name', config('app.name'));
-            $merchantInfo->merchantCity = (string) config('services.bakong.merchant_city', 'PHNOM PENH');
-            $merchantInfo->amount = $dynamicAmount;
-            $merchantInfo->currency = $currency;
-            $merchantInfo->billNumber = $booking->booking_no;
-            $merchantInfo->acquiringBank = (string) config('services.bakong.acquiring_bank', '');
+            $merchantName = trim((string) config('services.bakong.merchant_name', config('app.name')));
+            $merchantCity = trim((string) config('services.bakong.merchant_city', 'PHNOM PENH'));
+            $merchantId = trim((string) config('services.bakong.merchant_id', ''));
+            $acquiringBank = trim((string) config('services.bakong.acquiring_bank', ''));
+
+            if ($merchantName === '') {
+                $merchantName = (string) config('app.name', 'Merchant');
+            }
+
+            if ($merchantCity === '') {
+                $merchantCity = 'PHNOM PENH';
+            }
+
+            $merchantName = mb_substr($merchantName, 0, 25);
+            $merchantCity = mb_substr($merchantCity, 0, 15);
+
+            if ($merchantId === '') {
+                $merchantId = $this->deriveMerchantIdFromBakongId($bakongAccountId);
+            }
+
+            if ($acquiringBank === '') {
+                $acquiringBank = $this->deriveAcquiringBankFromBakongId($bakongAccountId);
+            }
+
+            $merchantInfo = MerchantInfo::withOptionalArray(
+                $bakongAccountId,
+                $merchantName,
+                $merchantCity,
+                $merchantId,
+                $acquiringBank,
+                [
+                    'currency' => $currency,
+                    'amount' => $dynamicAmount,
+                    'billNumber' => $booking->booking_no,
+                ]
+            );
 
             $response = BakongKHQR::generateMerchant($merchantInfo);
+            $payload = is_array($response->data) ? ($response->data['qr'] ?? null) : null;
+            $md5 = is_array($response->data) ? ($response->data['md5'] ?? null) : null;
 
-            return [
-                'payload' => $response->data['qr'],
-                'md5' => $response->data['md5'],
+            if (! is_string($payload) || $payload === '' || ! is_string($md5) || $md5 === '') {
+                return ['error' => 'Unable to generate Bakong QR at the moment.', 'is_static' => $dynamicAmount <= 0, 'payload' => null, 'md5' => null];
+            }
+
+            $result = [
+                'payload' => $payload,
+                'md5' => $md5,
                 'is_static' => $dynamicAmount <= 0,
                 'error' => null,
             ];
+            try {
+                Cache::put($cacheKey, $result, now()->addMinutes(15));
+            } catch (Throwable $e) {
+                report($e);
+            }
+
+            return $result;
         } catch (Throwable $e) {
             report($e);
             return ['error' => 'Unable to generate Bakong QR at the moment.', 'is_static' => $dynamicAmount <= 0, 'payload' => null, 'md5' => null];
@@ -384,5 +442,34 @@ class BookingController extends Controller
 
         $status = strtoupper((string) $item['status']);
         return in_array($status, ['SUCCESS', 'COMPLETED', 'PAID'], true);
+    }
+
+    private function bookingPaymentCacheKey(Booking $booking): string
+    {
+        return 'booking_payment_qr_' . $booking->id . '_' . md5($booking->booking_no . '|' . (string) $booking->total_price);
+    }
+
+    private function deriveAcquiringBankFromBakongId(string $bakongAccountId): string
+    {
+        $parts = explode('@', $bakongAccountId);
+        $domain = trim((string) ($parts[1] ?? ''));
+
+        if ($domain === '') {
+            return 'Bakong';
+        }
+
+        return strtoupper(substr($domain, 0, 32));
+    }
+
+    private function deriveMerchantIdFromBakongId(string $bakongAccountId): string
+    {
+        $normalized = preg_replace('/[^A-Za-z0-9]/', '', $bakongAccountId);
+        $normalized = strtoupper((string) $normalized);
+
+        if ($normalized === '') {
+            return 'MERCHANT001';
+        }
+
+        return substr($normalized, 0, 32);
     }
 }

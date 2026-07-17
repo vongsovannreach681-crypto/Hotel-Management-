@@ -25,16 +25,22 @@
     .qr-thumb { width:min(180px, 100%); }
     .helper { color:#6d7f90; font-size:0.85rem; }
     .actions { display:flex; gap:0.6rem; flex-wrap:wrap; }
-    .qr-modal-backdrop { position:fixed; inset:0; background:rgba(16,23,34,.72); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; padding:1rem; z-index:9999; }
+    .qr-modal-backdrop { position:fixed; inset:0; background:radial-gradient(circle at top, rgba(44,74,120,.55), rgba(9,16,28,.86)); backdrop-filter:blur(5px); display:none; align-items:center; justify-content:center; padding:1rem; z-index:9999; }
     .qr-modal-backdrop.open { display:flex; }
-    .qr-modal { width:min(440px, 100%); background:#fff; border:1px solid #dfcfb7; border-radius:18px; padding:1rem; box-shadow:0 26px 44px rgba(0,0,0,.28); }
-    .qr-modal-head { display:flex; align-items:center; justify-content:space-between; gap:0.8rem; margin-bottom:0.75rem; }
-    .qr-modal-head h3 { font-size:1.05rem; color:#1f2a3a; }
-    .qr-close { border:none; background:#f6ece0; color:#354a62; border-radius:999px; width:34px; height:34px; font-size:1.1rem; cursor:pointer; }
-    .qr-modal-body .qr-wrap { width:100%; }
+    .qr-modal { width:min(440px, 100%); color:#fff; background:linear-gradient(160deg, #0f3566 0%, #04264f 58%, #032140 100%); border:1px solid rgba(255,255,255,.2); border-radius:22px; padding:1rem; box-shadow:0 32px 52px rgba(0,0,0,.42); }
+    .qr-modal-head { display:flex; align-items:center; justify-content:space-between; gap:0.8rem; margin-bottom:0.85rem; }
+    .aba-brand { display:inline-flex; align-items:center; gap:0.5rem; font-weight:700; letter-spacing:.07em; font-size:.82rem; color:#e7f2ff; }
+    .aba-dot { width:9px; height:9px; border-radius:999px; background:#fd4a4a; box-shadow:12px 0 0 #fff, 24px 0 0 #fd4a4a; margin-right:18px; }
+    .qr-close { border:none; background:rgba(255,255,255,.18); color:#fff; border-radius:999px; width:34px; height:34px; font-size:1.1rem; cursor:pointer; }
+    .aba-amount { font-size:1.7rem; font-weight:800; letter-spacing:.01em; line-height:1.1; margin-bottom:.15rem; }
+    .aba-booking { color:rgba(230,240,252,.86); font-size:.85rem; margin-bottom:0.7rem; }
+    .qr-modal-body .qr-wrap { width:100%; background:#fff; border:1px solid #d9e5f5; padding:0.8rem; border-radius:16px; }
+    .aba-hint { color:#bed5ef; font-size:.82rem; text-align:center; margin-top:0.7rem; margin-bottom:0; }
 
     @media (max-width: 720px) {
         .grid { grid-template-columns:1fr; }
+        .qr-modal { padding:0.9rem; border-radius:20px; }
+        .aba-amount { font-size:1.48rem; }
     }
 </style>
 @endsection
@@ -73,9 +79,6 @@
                     <div class="qr-actions">
                         <button type="button" class="btn btn-primary" id="openQrModal">Open QR Popup</button>
                     </div>
-                    @if ($paymentQrMd5)
-                        <p class="helper" style="font-size:0.8rem;">Ref: {{ $paymentQrMd5 }}</p>
-                    @endif
                 @elseif ($paymentQrError)
                     <p class="helper" style="color:#9a3528;">{{ $paymentQrError }}</p>
                 @else
@@ -100,12 +103,14 @@
     <div class="qr-modal-backdrop" id="qrModalBackdrop" aria-hidden="true">
         <div class="qr-modal" role="dialog" aria-modal="true" aria-label="Bakong QR Payment">
             <div class="qr-modal-head">
-                <h3>Scan To Pay</h3>
+                <div class="aba-brand"><span class="aba-dot"></span><span>ABA PAYWAY</span></div>
                 <button type="button" class="qr-close" id="closeQrModal" aria-label="Close QR popup">&times;</button>
             </div>
+            <div class="aba-amount">${{ number_format((float) $booking->total_price, 2) }}</div>
+            <p class="aba-booking">Booking {{ $booking->booking_no }}</p>
             <div class="qr-modal-body">
                 <div class="qr-wrap">{!! $paymentQrSvg !!}</div>
-                <p class="helper" style="margin-top:0.7rem;">Booking {{ $booking->booking_no }} - ${{ number_format((float) $booking->total_price, 2) }}</p>
+                <p class="aba-hint">Scan with ABA, Bakong, or supported banking app</p>
             </div>
         </div>
     </div>

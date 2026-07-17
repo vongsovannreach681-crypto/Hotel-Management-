@@ -38,8 +38,10 @@ return [
     'bakong' => [
         'token' => env('BAKONG_API_TOKEN'),
         'account_id' => env('BAKONG_ACCOUNT_ID'),
+        'merchant_id' => env('BAKONG_MERCHANT_ID'),
         'merchant_name' => env('BAKONG_MERCHANT_NAME', env('APP_NAME')),
         'merchant_city' => env('BAKONG_MERCHANT_CITY', 'PHNOM PENH'),
+        'acquiring_bank' => env('BAKONG_ACQUIRING_BANK'),
         'currency' => env('BAKONG_CURRENCY', 'USD'),
         'force_static' => env('BAKONG_FORCE_STATIC', true),
     ],
