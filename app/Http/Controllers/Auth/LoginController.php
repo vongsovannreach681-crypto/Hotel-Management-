@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Hash;
 class LoginController extends Controller
 {
     private const ADMIN_EMAIL = 'reach@gmail.com';
-    private const ADMIN_PASSWORD = 'reach123!@#';
+    private const ADMIN_PASSWORD = 'Reach321';
 
     public function create()
     {
@@ -43,16 +43,12 @@ class LoginController extends Controller
                 $admin->save();
             }
 
-            Auth::login($admin, $request->boolean('remember'));
-            $request->session()->regenerate();
-
-            return redirect()->route('dashboard.index')->with('success', 'Welcome, Admin.');
         }
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
             $this->syncGuestFromAuthenticatedUser();
-            return redirect()->intended(route('user.home'))->with('success', 'Welcome back!');
+            return redirect()->intended(url('/'))->with('success', 'Welcome back!');
         }
 
         return back()->withErrors([
@@ -67,7 +63,7 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('user.home')->with('success', 'Logged out successfully.');
+        return redirect('/')->with('success', 'Logged out successfully.');
     }
 
     private function syncGuestFromAuthenticatedUser(): void

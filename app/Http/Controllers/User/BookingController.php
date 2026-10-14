@@ -12,7 +12,9 @@ use App\Models\Hotel;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use KHQR\Config\Constants;
 use KHQR\BakongKHQR;
 use KHQR\Helpers\KHQRData;
 use KHQR\Models\MerchantInfo;
@@ -336,7 +338,7 @@ class BookingController extends Controller
 
     private function isBakongPaymentSuccessful(array $response): bool
     {
-        if (($response['responseCode'] ?? -1) !== 0) {
+        if ((int) ($response['responseCode'] ?? -1) !== 0) {
             return false;
         }
 
@@ -357,6 +359,41 @@ class BookingController extends Controller
 
         // Case 3: data is a single transaction object.
         return $this->isTransactionItemSuccessful($data);
+    }
+
+    private function checkBakongTransactionByMd5(string $token, string $md5): array
+    {
+        $useTestEndpoint = (bool) config('services.bakong.use_test_endpoint', false);
+        $verifySsl = (bool) config('services.bakong.verify_ssl', true);
+        $url = $useTestEndpoint
+            ? Constants::SIT_CHECK_TRANSACTION_MD5_URL
+            : Constants::CHECK_TRANSACTION_MD5_URL;
+
+        $request = Http::acceptJson()
+            ->asJson()
+            ->withToken($token)
+            ->timeout(60)
+            ->connectTimeout(10);
+
+        if (! $verifySsl) {
+            $request = $request->withoutVerifying();
+        }
+
+        $response = $request->post($url, ['md5' => $md5]);
+
+        if (! $response->successful()) {
+            $json = $response->json();
+
+            if (is_array($json)) {
+                return $json;
+            }
+
+            throw new \RuntimeException('Bakong API request failed.');
+        }
+
+        $json = $response->json();
+
+        return is_array($json) ? $json : [];
     }
 
     private function verifyPaymentForBooking(Booking $booking): array
@@ -404,8 +441,7 @@ class BookingController extends Controller
         }
 
         try {
-            $client = new BakongKHQR($token);
-            $response = $client->checkTransactionByMD5((string) $paymentData['md5']);
+            $response = $this->checkBakongTransactionByMd5($token, (string) $paymentData['md5']);
 
             if (! $this->isBakongPaymentSuccessful($response)) {
                 return [

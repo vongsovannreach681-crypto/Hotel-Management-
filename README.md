@@ -67,3 +67,19 @@ Quick start to run this sample route locally:
 - Run migrations (optional): `php artisan migrate`
 - Serve the app: `php artisan serve`
 - Open the sample page: `http://127.0.0.1:8000/sample`
+
+## Deploying to Vercel
+
+The repository includes a Vercel PHP function entry point and routing in `api/index.php` and `vercel.json`. Vercel builds the Vite assets with `npm run build`, serves files from `public/`, and sends application routes to Laravel.
+
+1. Import this repository into Vercel with the project root set to the repository root. Keep the build and output settings from `vercel.json`.
+2. Add these environment variables in **Project Settings → Environment Variables** for Production (and Preview if needed):
+   - `APP_ENV=production`
+   - `APP_DEBUG=false`
+   - `APP_KEY` — generate locally with `php artisan key:generate --show` and paste the result.
+   - `APP_URL` — the deployed HTTPS URL.
+   - Database settings for a hosted PostgreSQL database: `DB_CONNECTION=pgsql`, plus `DB_URL` (or `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD`).
+   - `BAKONG_API_TOKEN`, `BAKONG_ACCOUNT_ID`, `BAKONG_MERCHANT_ID`, and `BAKONG_ACQUIRING_BANK` if using Bakong payments.
+3. Deploy, then run migrations against the hosted database from a trusted local environment: `php artisan migrate --force`.
+
+Vercel's function disk is temporary. Laravel runtime files are directed to `/tmp`; user uploads must use durable object storage (for example, S3) rather than the local disk. Use a hosted database for application data and database-backed sessions, cache, and queues; do not use SQLite or depend on local files persisting between requests.
