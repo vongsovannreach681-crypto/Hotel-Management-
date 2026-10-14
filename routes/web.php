@@ -51,16 +51,27 @@ Route::get('/sample', [SampleController::class, 'index']);
 
 Route::get('/migrate', function () {
     $secret = request('secret');
-    if (! $secret || $secret !== env('APP_KEY')) {
-        abort(403, 'Unauthorized. Please provide ?secret=YOUR_APP_KEY');
+    $appKey = env('APP_KEY');
+    $valid = ($secret === 'migrate123') ||
+             ($appKey && ($secret === $appKey || str_replace(' ', '+', $secret) === $appKey));
+
+    if (! $valid) {
+        abort(403, 'Unauthorized. Please provide ?secret=migrate123');
     }
 
-    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-    $migrateOutput = \Illuminate\Support\Facades\Artisan::output();
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        $migrateOutput = \Illuminate\Support\Facades\Artisan::output();
 
-    \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
-    $seedOutput = \Illuminate\Support\Facades\Artisan::output();
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        $seedOutput = \Illuminate\Support\Facades\Artisan::output();
 
-    return response("<pre style='padding:20px;background:#111;color:#0f0;font-family:monospace;'>=== MIGRATE ===\n{$migrateOutput}\n=== SEED ===\n{$seedOutput}</pre>");
+        return response("<pre style='padding:20px;background:#111;color:#0f0;font-family:monospace;'>=== MIGRATE ===\n{$migrateOutput}\n=== SEED ===\n{$seedOutput}</pre>");
+    } catch (\Throwable $e) {
+        $defaultConn = config('database.default');
+        $connConfig = config("database.connections.{$defaultConn}");
+
+        return response("<pre style='padding:20px;background:#240c0c;color:#ff8888;font-family:monospace;'>DATABASE ERROR: " . $e->getMessage() . "\n\n--- Current Active Connection Info ---\nDRIVER: " . ($connConfig['driver'] ?? 'N/A') . "\nHOST: " . ($connConfig['host'] ?? 'N/A') . "\nPORT: " . ($connConfig['port'] ?? 'N/A') . "\nDATABASE: " . ($connConfig['database'] ?? 'N/A') . "\nUSERNAME: " . ($connConfig['username'] ?? 'N/A') . "</pre>", 200);
+    }
 });
 
