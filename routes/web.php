@@ -48,3 +48,19 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 
 Route::get('/sample', [SampleController::class, 'index']);
+
+Route::get('/migrate', function () {
+    $secret = request('secret');
+    if (! $secret || $secret !== env('APP_KEY')) {
+        abort(403, 'Unauthorized. Please provide ?secret=YOUR_APP_KEY');
+    }
+
+    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    $migrateOutput = \Illuminate\Support\Facades\Artisan::output();
+
+    \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+    $seedOutput = \Illuminate\Support\Facades\Artisan::output();
+
+    return response("<pre style='padding:20px;background:#111;color:#0f0;font-family:monospace;'>=== MIGRATE ===\n{$migrateOutput}\n=== SEED ===\n{$seedOutput}</pre>");
+});
+
