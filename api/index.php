@@ -31,5 +31,6 @@ require __DIR__.'/../vendor/autoload.php';
 
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
+$app->useStoragePath($storagePath);
 
 $app->handleRequest(Request::capture());
