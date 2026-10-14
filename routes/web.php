@@ -13,6 +13,7 @@ use App\Http\Controllers\User\BookingController as UserBookingController;
 use App\Http\Controllers\User\ProfileController as UserProfileController;
 
 Route::get('/', [UserHomeController::class, 'index'])->name('user.home');
+Route::redirect('/home', '/');
 Route::get('/rooms', [UserHomeController::class, 'rooms'])->name('user.rooms.index');
 Route::get('/rooms/{hotel}', [UserHomeController::class, 'show'])->name('user.hotels.show');
 
