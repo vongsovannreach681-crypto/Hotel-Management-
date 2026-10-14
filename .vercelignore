@@ -1,0 +1,11 @@
+/vendor
+/node_modules
+.env
+.env.*
+.git
+.github
+tests
+.phpunit.result.cache
+Dockerfile
+render.yaml
+
